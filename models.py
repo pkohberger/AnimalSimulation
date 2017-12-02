@@ -6,11 +6,12 @@ from random import *
 
 class Simulation():
 
-	years = 0
 	species = {}
 	habitats = {}
 	months_in_year = 12
-	simulation_permutations = 0
+	years = 0
+	months = ('jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sept', 'oct', 'nov', 'dec')
+	seasons = {'jan' : 'winter', 'feb' : 'winter', 'mar' : 'spring', 'apr' : 'spring', 'may' : 'spring', 'jun' : 'summer', 'jul': 'summer', 'aug' : 'summer', 'sept' : 'fall', 'oct' : 'fall', 'nov' : 'fall', 'dec' : 'winter'}
 	YAML_OUTPUT = {}
 
 	def __init__(self, file):
@@ -21,9 +22,11 @@ class Simulation():
 				self.years = simulation['years']
 				self.species = simulation['species']
 				self.habitats = simulation['habitats']
-				self.simulation_permutations = self.years * self.months_in_year
 			except yaml.YAMLError as e:
 				print(e)
+
+	def get_season(self, month):
+		return self.seasons[month]
 
 	def process_all_habitat_simulations(self):
 		for animal in self.species:
@@ -34,51 +37,77 @@ class Simulation():
 
 	def process_habitat_simulation(self,animal,habitat):
 
+		average_population = 0
 		max_population = 0
 		mortality_rate = 0
 		cause_of_death = {}
-		male_inhabitants = 1
-		female_inhabitants = 1
-		pregnancy_term = animal['attributes']['off_spring_rate_months']
+		male_inhabitants = {0 : {'age' : 0}}
+		female_inhabitants = {0 : {'age' : 0}}
+		off_spring_rate = animal['attributes']['off_spring_rate']
+		off_spring_min = animal['attributes']['off_spring_min']
+		permutation = 0
 
-		for permutation in range(self.simulation_permutations):
-			#every X months iterate through female inhabitants and 
-			#add either one male or one female to the respective lists
-			#in order to track birthdates and pregnancy terms of each individual
-			#inhabitant will be a large undertaking so we assume
-			#for sake of running this simulation that we breed every X terms
-			if permutation % pregnancy_term == 0:
-				if random() < .5:
-					male_inhabitants += 1
-				else:
-					female_inhabitants += 1
+		for year in range(self.years):
+			for month in self.months:
+				female_inhabitants, male_inhabitants = self.grow_inhabitants(male_inhabitants,female_inhabitants)
+				female_inhabitants, male_inhabitants = self.breed_inhabitants(male_inhabitants,female_inhabitants,off_spring_rate,off_spring_min,permutation)
+				self.kill_inhabitants(male_inhabitants,female_inhabitants,permutation)
 
-		pprint(male_inhabitants)
+				permutation += 1
 
-		average_population = (male_inhabitants + female_inhabitants)/self.years
+		pprint(animal['name'])
+		pprint(female_inhabitants)
 
 		return {
-			"Average_Population_(Annual)" : male_inhabitants, 
+			"Average_Population" : average_population, 
 			"Max_Population" : max_population, 
 			"Mortality_Rate" : mortality_rate, 
 			"Cause_of_Death" : cause_of_death
 		}
 
-	class Species():
 
-		name = ""
-		monthly_food_consumption = 0
-	  	monthly_water_consumption = 0
-	  	life_span = 0
-	  	minimum_temperature = 0
-	  	maximum_temperature = 0
+	def grow_inhabitants(self,male_inhabitants,female_inhabitants):
+		#grow both men and women by one month
+		for male_inhabitant in male_inhabitants:
+			male_inhabitants[male_inhabitant]['age'] += 1
+		for female_inhabitant in female_inhabitants:
+			female_inhabitants[female_inhabitant]['age'] += 1
+		return female_inhabitants, male_inhabitants
 
-	class Habitat():
+	def breed_inhabitants(self,male_inhabitants,female_inhabitants,off_spring_rate,off_spring_min,permutation):
 
-		name = ""
-		monthly_food = 0
-	  	monthly_water = 0
-	  	summer_temp = 0
-	  	spring_temp = 0
-	  	fall_temp = 0
-	  	winter_temp = 0
+		#create new lists so we can add while in loop
+		new_female_inhabitants = {}
+		new_male_inhabitants = {}
+		new_births = {}
+		i = 0
+
+		#if is breeding interval
+		if permutation % off_spring_rate == 0:
+
+			#iterate through all females check if minimum age has been reached
+			for female_inhabitant in female_inhabitants:
+				if female_inhabitants[female_inhabitant]['age'] > off_spring_min:
+					new_births[i] = i
+
+			#create new babies, if no new births loop wont iter once
+			for new_birth in new_births:
+				if random() < .5:
+					new_female_inhabitants = {len(female_inhabitants) + new_birth : {'age' : 0}}
+				else:
+					new_male_inhabitants = {len(female_inhabitants) + new_birth : {'age' : 0}}
+
+			#return merged dictionaries
+			return self.merge_dicts(female_inhabitants, new_female_inhabitants), self.merge_dicts(male_inhabitants, new_male_inhabitants)
+		else:
+			#return original dictionaries
+			return female_inhabitants, male_inhabitants
+
+	def merge_dicts(self,x,y):
+	    z = x.copy()
+	    z.update(y)
+	    return z
+
+
+	def kill_inhabitants(self,male_inhabitants,female_inhabitants,permutation):
+		return True
