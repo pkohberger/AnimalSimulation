@@ -15,6 +15,6 @@ def upload_file():
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            Simulation(filename).process_all_simulations()
+            Simulation(filename).process_all_habitat_simulations()
 
 	return redirect(url_for('home_page'))
