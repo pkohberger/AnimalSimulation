@@ -39,11 +39,14 @@ class Simulation():
 		cause_of_death = {}
 		male_inhabitants = 1
 		female_inhabitants = 1
-		pregnancy_term = 9
+		pregnancy_term = animal['attributes']['off_spring_rate_months']
 
 		for permutation in range(self.simulation_permutations):
-			#birth rate really very simple, every nine months
-			#50/50 chance of male birth or female birth
+			#every X months iterate through female inhabitants and 
+			#add either one male or one female to the respective lists
+			#in order to track birthdates and pregnancy terms of each individual
+			#inhabitant will be a large undertaking so we assume
+			#for sake of running this simulation that we breed every X terms
 			if permutation % pregnancy_term == 0:
 				if random() < .5:
 					male_inhabitants += 1
