@@ -1,6 +1,6 @@
-from app import Flask, app, render_template, request, redirect, url_for, os, 	allowed_file
+from app import Flask, app, render_template, request, redirect, url_for, os, allowed_file
 from werkzeug.utils import secure_filename
-from models import Species
+from models import Simulation
 
 @app.route('/')
 def home_page():
@@ -15,5 +15,6 @@ def upload_file():
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            Simulation(filename).process_all_simulations()
 
 	return redirect(url_for('home_page'))
