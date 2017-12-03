@@ -18,9 +18,8 @@ def allowed_file(filename):
     filename.rsplit('.',1)[1] in ALLOWED_EXTENSIONS
 
 def merge_dicts(x,y):
-    z = x.copy()
-    z.update(y)
-    return z
+    x.update(y)
+    return x
 
 if __name__ == '__main__':
     app.run(debug=True)

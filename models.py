@@ -3,6 +3,7 @@ import os
 from pprint import pprint
 from app import APP_ROOT, UPLOAD_FOLDER, merge_dicts
 from utils import Utils
+from enum import Enum
 from random import *
 
 class Simulation(object):
@@ -34,6 +35,17 @@ class Simulation(object):
 	def get_season(self, month):
 		return self.seasons[month]
 
+	#wrapper so we only define this structure once
+	#can later return custom object perhaps
+	def get_inhabitant_structure(self,key):
+		return {
+			key : {
+				'age' : 0,
+				'food_consumption' : {},
+				'water_consumption' : {}
+			}
+		}
+
 	def process_all_habitat_simulations(self):
 		for animal in self.species:
 			self.OUTPUT[animal['name']] = {}
@@ -51,20 +63,8 @@ class Simulation(object):
 		cause_of_death = {}
 		#each habitat starts off with exactly one
 		#male and one female
-		male_inhabitants = {
-			0 : {
-				'age' : 0,
-				'food_consumption' : {},
-				'water_consumption' : {}
-			}
-		}
-		female_inhabitants = {
-			0 : {
-				'age' : 0,
-				'food_consumption' : {},
-				'water_consumption' : {}
-			}
-		}
+		male_inhabitants = self.get_inhabitant_structure(0)
+		female_inhabitants = self.get_inhabitant_structure(0)
 		permutation = 0
 
 		#attempt to initialize species indicator variables
@@ -76,6 +76,7 @@ class Simulation(object):
 			maximum_temperature = animal['attributes']['maximum_temperature']
 			off_spring_rate = animal['attributes']['off_spring_rate']
 			off_spring_min = animal['attributes']['off_spring_min']
+			off_spring_max = animal['attributes']['off_spring_max']
 			habitat_monthly_food = habitat['monthly_food']
 			habitat_monthly_water = habitat['monthly_water']
 		except OSError as e:
@@ -93,7 +94,7 @@ class Simulation(object):
 					animal_monthly_food_consumption,habitat_monthly_food,habitat_monthly_water
 				)
 				female_inhabitants, male_inhabitants = self.breed_inhabitants(
-					male_inhabitants,female_inhabitants,off_spring_rate,off_spring_min,permutation
+					male_inhabitants,female_inhabitants,off_spring_rate,off_spring_min,off_spring_max,permutation
 				)
 				female_inhabitants, male_inhabitants = self.kill_inhabitants(
 					male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,
@@ -104,7 +105,7 @@ class Simulation(object):
 				permutation += 1
 
 		if self.DEBUG:
-			pprint("-----------------------------------------")
+			pprint("-------------")
 			pprint(animal['name'])
 			pprint(habitat['name'])
 			pprint('females:')
@@ -125,12 +126,17 @@ class Simulation(object):
 		animal_monthly_food_consumption,habitat_monthly_food,habitat_monthly_water
 	):
 		female_inhabitants, male_inhabitants = self.age_inhabitants(male_inhabitants,female_inhabitants)
+
+		#habitat elders will be given priority in food consumption
 		female_inhabitants, male_inhabitants = self.feed_inhabitants(
 			male_inhabitants,female_inhabitants,permutation,animal_monthly_food_consumption,habitat_monthly_food
 		)
+
+		#habitat elders will be given priority in water consumption
 		female_inhabitants, male_inhabitants = self.water_inhabitants(
 			male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,habitat_monthly_water
 		)
+
 		return female_inhabitants, male_inhabitants
 
 	def age_inhabitants(self,male_inhabitants,female_inhabitants):
@@ -146,43 +152,87 @@ class Simulation(object):
 
 	def feed_inhabitants(self,male_inhabitants,female_inhabitants,permutation,animal_monthly_food_consumption,habitat_monthly_food):
 		#data structures for reset of dicts
-		new_male_inhabitants = {
-			0 : {
-				'age' : 0,
-				'food_consumption' : {},
-				'water_consumption' : {}
-			}
-		}
-		new_female_inhabitants = {
-			0 : {
-				'age' : 0,
-				'food_consumption' : {},
-				'water_consumption' : {}
-			}
-		}
+		new_male_inhabitants = self.get_inhabitant_structure(0)
+		new_female_inhabitants = self.get_inhabitant_structure(0)
 
+		#roughly distribute food 50/50
+		male_habitat_monthly_food = habitat_monthly_food/2
+		male_consumption_total = 0
 		for male_inhabitant in male_inhabitants:
 			new_male_inhabitants[male_inhabitant] = male_inhabitants[male_inhabitant]
+			#merge new data
 			new_male_inhabitants[male_inhabitant]['food_consumption'] = merge_dicts(
 				new_male_inhabitants[male_inhabitant]['food_consumption'],
-				{permutation : animal_monthly_food_consumption}
+				{
+					#only consume food if its under alotted amount for habitat for that month
+					permutation : animal_monthly_food_consumption if male_consumption_total <= (male_habitat_monthly_food - animal_monthly_food_consumption) else 0
+				}
 			)
+			#add consumption to total
+			male_consumption_total += animal_monthly_food_consumption
 
+		#roughly distribute food 50/50
+		female_habitat_monthly_food = habitat_monthly_food/2
+		female_consumption_total = 0
 		for female_inhabitant in female_inhabitants:
 			new_female_inhabitants[female_inhabitant] = female_inhabitants[female_inhabitant]
+			#merge new data
 			new_female_inhabitants[female_inhabitant]['food_consumption'] = merge_dicts(
 				new_female_inhabitants[female_inhabitant]['food_consumption'],
-				{permutation : animal_monthly_food_consumption}
+				{
+					#only consume food if its under alotted amount for habitat for that month
+					permutation : animal_monthly_food_consumption if female_consumption_total <= (female_habitat_monthly_food - animal_monthly_food_consumption) else 0
+				}
 			)
+			#add consumption to total
+			female_consumption_total += animal_monthly_food_consumption
 
-		return new_female_inhabitants, new_male_inhabitants
+		#return new dicts
+		return female_inhabitants, male_inhabitants
 
 	def water_inhabitants(self,male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,habitat_monthly_water):
+		#data structures for reset of dicts
+		new_male_inhabitants = self.get_inhabitant_structure(0)
+		new_female_inhabitants = self.get_inhabitant_structure(0)
+
+		#roughly distribute water 50/50
+		male_habitat_monthly_water = habitat_monthly_water/2
+		male_consumption_total = 0
+		for male_inhabitant in male_inhabitants:
+			new_male_inhabitants[male_inhabitant] = male_inhabitants[male_inhabitant]
+			#merge new data
+			new_male_inhabitants[male_inhabitant]['water_consumption'] = merge_dicts(
+				new_male_inhabitants[male_inhabitant]['water_consumption'],
+				{
+					#only consume water if its under alotted amount for habitat for that month
+					permutation : animal_monthly_water_consumption if male_consumption_total <= (male_habitat_monthly_water - animal_monthly_water_consumption) else 0
+				}
+			)
+			#add consumption to total
+			male_consumption_total += animal_monthly_water_consumption
+
+		#roughly distribute water 50/50
+		female_habitat_monthly_water = habitat_monthly_water/2
+		female_consumption_total = 0
+		for female_inhabitant in female_inhabitants:
+			new_female_inhabitants[female_inhabitant] = female_inhabitants[female_inhabitant]
+			#merge new data
+			new_female_inhabitants[female_inhabitant]['water_consumption'] = merge_dicts(
+				new_female_inhabitants[female_inhabitant]['water_consumption'],
+				{
+					#only consume water if its under alotted amount for habitat for that month
+					permutation : animal_monthly_water_consumption if female_consumption_total <= (female_habitat_monthly_water - animal_monthly_water_consumption) else 0
+				}
+			)
+			#add consumption to total
+			female_consumption_total += animal_monthly_water_consumption
+
+		#return new dicts
 		return female_inhabitants, male_inhabitants
 
 	#passing in large amount of parameters because 
 	#passing entire animal structure is potentially more expensive
-	def breed_inhabitants(self,male_inhabitants,female_inhabitants,off_spring_rate,off_spring_min,permutation):
+	def breed_inhabitants(self,male_inhabitants,female_inhabitants,off_spring_rate,off_spring_min,off_spring_max,permutation):
 
 		#create new lists so we can add while in loop
 		new_female_inhabitants = {}
@@ -197,7 +247,7 @@ class Simulation(object):
 			for female_inhabitant in female_inhabitants:
 				#divide by zero may happen, lets ignore that
 				try:
-					if female_inhabitants[female_inhabitant]['age']/self.months_in_year > off_spring_min:
+					if female_inhabitants[female_inhabitant]['age']/self.months_in_year > off_spring_min and female_inhabitants[female_inhabitant]['age']/self.months_in_year < off_spring_max:
 						new_births[i] = i
 				except OSError as e:
 					print(e)
@@ -205,21 +255,11 @@ class Simulation(object):
 			#create new babies, if no new births loop wont iter once
 			for new_birth in new_births:
 				if random() < .5:
-					new_female_inhabitants = {
-						len(female_inhabitants) + new_birth : {
-							'age' : 0,
-							'food_consumption' : {},
-							'water_consumption' : {}
-						}
-					}
+					#create correctly ordered key
+					new_female_inhabitants = self.get_inhabitant_structure(len(female_inhabitants) + new_birth)
 				else:
-					new_male_inhabitants = {
-						len(male_inhabitants) + new_birth : {
-							'age' : 0,
-							'food_consumption' : {},
-							'water_consumption' : {}
-						}
-					}
+					#create correctly ordered key
+					new_male_inhabitants = self.get_inhabitant_structure(len(male_inhabitants) + new_birth)
 
 			#return merged dictionaries
 			return merge_dicts(female_inhabitants, new_female_inhabitants), merge_dicts(male_inhabitants, new_male_inhabitants)
@@ -260,6 +300,8 @@ class Simulation(object):
 		self,male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,
 		animal_monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
 	):
+		new_male_inhabitants = self.get_inhabitant_structure(0)
+		new_female_inhabitants = self.get_inhabitant_structure(0)
 		return male_inhabitants,female_inhabitants
 
 	def kill_inhabitants_from_dehydration(
