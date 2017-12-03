@@ -37,10 +37,14 @@ class Simulation(object):
 
 	#wrapper so we only define this structure once
 	#can later return custom object perhaps
-	def get_inhabitant_structure(self,key):
+	def get_inhabitants_structure(self,key):
+		#age is in permutations or months
+		#food_consumption and water_concumption keys
+		#are based on permutation or month they are born in
+		#so these may be arbitrary but will be in increments of 1
 		return {
 			key : {
-				'age' : 0,
+				'age' : 0, 
 				'food_consumption' : {},
 				'water_consumption' : {}
 			}
@@ -63,8 +67,8 @@ class Simulation(object):
 		cause_of_death = {}
 		#each habitat starts off with exactly one
 		#male and one female
-		male_inhabitants = self.get_inhabitant_structure(0)
-		female_inhabitants = self.get_inhabitant_structure(0)
+		male_inhabitants = self.get_inhabitants_structure(0)
+		female_inhabitants = self.get_inhabitants_structure(0)
 		permutation = 0
 
 		#attempt to initialize species indicator variables
@@ -152,8 +156,8 @@ class Simulation(object):
 
 	def feed_inhabitants(self,male_inhabitants,female_inhabitants,permutation,animal_monthly_food_consumption,habitat_monthly_food):
 		#data structures for reset of dicts
-		new_male_inhabitants = self.get_inhabitant_structure(0)
-		new_female_inhabitants = self.get_inhabitant_structure(0)
+		new_male_inhabitants = self.get_inhabitants_structure(0)
+		new_female_inhabitants = self.get_inhabitants_structure(0)
 
 		#roughly distribute food 50/50
 		male_habitat_monthly_food = habitat_monthly_food/2
@@ -192,8 +196,8 @@ class Simulation(object):
 
 	def water_inhabitants(self,male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,habitat_monthly_water):
 		#data structures for reset of dicts
-		new_male_inhabitants = self.get_inhabitant_structure(0)
-		new_female_inhabitants = self.get_inhabitant_structure(0)
+		new_male_inhabitants = self.get_inhabitants_structure(0)
+		new_female_inhabitants = self.get_inhabitants_structure(0)
 
 		#roughly distribute water 50/50
 		male_habitat_monthly_water = habitat_monthly_water/2
@@ -245,7 +249,7 @@ class Simulation(object):
 
 			#iterate through all females check if minimum age has been reached
 			for female_inhabitant in female_inhabitants:
-				#divide by zero may happen, lets ignore that
+				#zero in numerator may cause an issue, lets ignore that
 				try:
 					if female_inhabitants[female_inhabitant]['age']/self.months_in_year > off_spring_min and female_inhabitants[female_inhabitant]['age']/self.months_in_year < off_spring_max:
 						new_births[i] = i
@@ -256,10 +260,10 @@ class Simulation(object):
 			for new_birth in new_births:
 				if random() < .5:
 					#create correctly ordered key
-					new_female_inhabitants = self.get_inhabitant_structure(len(female_inhabitants) + new_birth)
+					new_female_inhabitants = self.get_inhabitants_structure(len(female_inhabitants) + new_birth)
 				else:
 					#create correctly ordered key
-					new_male_inhabitants = self.get_inhabitant_structure(len(male_inhabitants) + new_birth)
+					new_male_inhabitants = self.get_inhabitants_structure(len(male_inhabitants) + new_birth)
 
 			#return merged dictionaries
 			return merge_dicts(female_inhabitants, new_female_inhabitants), merge_dicts(male_inhabitants, new_male_inhabitants)
@@ -273,51 +277,152 @@ class Simulation(object):
 		self,male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,
 		animal_monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
 	):
-
 		male_inhabitants,female_inhabitants = self.kill_inhabitants_from_starvation(
-			male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,
-			animal_monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
+			male_inhabitants,female_inhabitants
 		)
-
 		male_inhabitants,female_inhabitants = self.kill_inhabitants_from_dehydration(
-			male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,
-			animal_monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
+			male_inhabitants,female_inhabitants
 		)
 
 		male_inhabitants,female_inhabitants = self.kill_inhabitants_from_natural_causes(
-			male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,
-			animal_monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
+			male_inhabitants,female_inhabitants,life_span
 		)
 
 		male_inhabitants,female_inhabitants = self.kill_inhabitants_from_extreme_temperature(
-			male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,
-			animal_monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
+			male_inhabitants,female_inhabitants,minimum_temperature,maximum_temperature
 		)
 
 		return male_inhabitants,female_inhabitants
 
-	def kill_inhabitants_from_starvation(
-		self,male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,
-		animal_monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
-	):
-		new_male_inhabitants = self.get_inhabitant_structure(0)
-		new_female_inhabitants = self.get_inhabitant_structure(0)
-		return male_inhabitants,female_inhabitants
+	def kill_inhabitants_from_starvation(self,male_inhabitants,female_inhabitants):
+		new_male_inhabitants = self.get_inhabitants_structure(0)
+		new_female_inhabitants = self.get_inhabitants_structure(0)
 
-	def kill_inhabitants_from_dehydration(
-		self,male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,
-		animal_monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
-	):
-		return male_inhabitants,female_inhabitants
+		#kill females
+		i = 0
+		#check each inhabitant
+		for female_inhabitant in female_inhabitants:
+			live = True
+			#iterate through inhabitant food consumption
+			for food_consumption in female_inhabitants[female_inhabitant]['food_consumption']:
+				#if previous 2 month keys exist
+				if ((female_inhabitants[female_inhabitant]['food_consumption']).has_key(food_consumption - 1)
+					and (female_inhabitants[female_inhabitant]['food_consumption']).has_key(food_consumption - 2)):
+					#then we check summation of those keys
+					#if sum of this iteration and last 2 months consumption == 0 then we ignore addition to list
+					#by setting live to False
+					if ((female_inhabitants[female_inhabitant]['food_consumption'][food_consumption] + 
+						 female_inhabitants[female_inhabitant]['food_consumption'][food_consumption - 1] +
+						 female_inhabitants[female_inhabitant]['food_consumption'][food_consumption - 2]) <= 0):
+						#by setting live to false, we are essentially killing 
+						#that inhabitant by not transferring it to return dict
+						live = False
+						break
+			#after inner loop processes we only add to return data structure
+			#if live was never set to False
+			if live:
+				new_female_inhabitants[i] = female_inhabitants[female_inhabitant]
+				#increment in order to reorder new structure
+				i += 1
 
-	def kill_inhabitants_from_natural_causes(
-		self,male_inhabitants,female_inhabitants,permutation,
-		animal_monthly_water_consumption,animal_monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
-	):
-		return male_inhabitants,female_inhabitants
+		#kill males
+		i = 0
+		#check each inhabitant
+		for male_inhabitant in male_inhabitants:
+			live = True
+			#iterate through inhabitant food consumption
+			for food_consumption in male_inhabitants[male_inhabitant]['food_consumption']:
+				#if previous 2 month keys exist
+				if ((male_inhabitants[male_inhabitant]['food_consumption']).has_key(food_consumption - 1)
+					and (male_inhabitants[male_inhabitant]['food_consumption']).has_key(food_consumption - 2)):
+					#then we check summation of those keys
+					#if sum of this iteration and last 2 months consumption == 0 then we ignore addition to list
+					#by setting live to False
+					if ((male_inhabitants[male_inhabitant]['food_consumption'][food_consumption] + 
+						 male_inhabitants[male_inhabitant]['food_consumption'][food_consumption - 1] +
+						 male_inhabitants[male_inhabitant]['food_consumption'][food_consumption - 2]) <= 0):
+						#by setting live to false, we are essentially killing 
+						#that inhabitant by not transferring it to return dict
+						live = False
+						break
+			#after inner loop processes we only add to return data structure
+			#if live was never set to False
+			if live:
+				new_male_inhabitants[i] = male_inhabitants[male_inhabitant]
+				#increment in order to reorder new structure
+				i += 1
+
+		return new_male_inhabitants,new_female_inhabitants
+
+	def kill_inhabitants_from_dehydration(self,male_inhabitants,female_inhabitants):
+		new_male_inhabitants = self.get_inhabitants_structure(0)
+		new_female_inhabitants = self.get_inhabitants_structure(0)
+
+		#kill females
+		i = 0
+		#check each inhabitant
+		for female_inhabitant in female_inhabitants:
+			live = True
+			#iterate through inhabitant water consumption
+			for water_consumption in female_inhabitants[female_inhabitant]['water_consumption']:
+				#if current month less than or equal to 0 then we kill due to thirst
+				if female_inhabitants[female_inhabitant]['water_consumption'][water_consumption] <= 0:
+					live = False
+					break
+			#after inner loop processes we only add to return data structure
+			#if live was never set to False
+			if live:
+				new_female_inhabitants[i] = female_inhabitants[female_inhabitant]
+				#increment in order to reorder new structure
+				i += 1
+
+		#kill males
+		i = 0
+		#check each inhabitant
+		for male_inhabitant in male_inhabitants:
+			live = True
+			#iterate through inhabitant water consumption
+			for water_consumption in male_inhabitants[male_inhabitant]['water_consumption']:
+				#if current month less than or equal to 0 then we kill due to thirst
+				if male_inhabitants[male_inhabitant]['water_consumption'][water_consumption] <= 0:
+					live = False
+					break
+			#after inner loop processes we only add to return data structure
+			#if live was never set to False
+			if live:
+				new_male_inhabitants[i] = male_inhabitants[male_inhabitant]
+				#increment in order to reorder new structure
+				i += 1
+
+		return new_male_inhabitants,new_female_inhabitants
+
+	def kill_inhabitants_from_natural_causes(self,male_inhabitants,female_inhabitants,life_span):
+		new_male_inhabitants = self.get_inhabitants_structure(0)
+		new_female_inhabitants = self.get_inhabitants_structure(0)
+
+		#kill females
+		i = 0
+		#check each inhabitant
+		for female_inhabitant in female_inhabitants:
+			#check age of each inhabitant against given life span
+			if female_inhabitants[female_inhabitant]['age']/12 <= life_span:
+				new_female_inhabitants[i] = female_inhabitants[female_inhabitant]
+				#increment in order to reorder new structure
+				i += 1
+
+		#kill males
+		i = 0
+		#check each inhabitant
+		for male_inhabitant in male_inhabitants:
+			#check age of each inhabitant against given life span
+			if male_inhabitants[male_inhabitant]['age']/12 <= life_span:
+				new_male_inhabitants[i] = male_inhabitants[male_inhabitant]
+				#increment in order to reorder new structure
+				i += 1
+
+		return new_male_inhabitants,new_female_inhabitants
 
 	def kill_inhabitants_from_extreme_temperature(
-		self,male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,
-		animal_monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
+		self,male_inhabitants,female_inhabitants,minimum_temperature,maximum_temperature
 	):
 		return male_inhabitants,female_inhabitants
