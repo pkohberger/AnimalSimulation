@@ -17,6 +17,7 @@ class Simulation(object):
 		'jul': 'summer', 'aug' : 'summer', 'sept' : 'fall', 'oct' : 'fall', 'nov' : 'fall', 'dec' : 'winter'
 	 }
 	OUTPUT = {}
+	DEBUG = False
 
 	def __init__(self, file):
 		file_name = os.path.join(UPLOAD_FOLDER, file)
@@ -26,6 +27,7 @@ class Simulation(object):
 				self.years = simulation['years']
 				self.species = simulation['species']
 				self.habitats = simulation['habitats']
+				self.DEBUG = True
 			except yaml.YAMLError as e:
 				print(e)
 
@@ -37,7 +39,8 @@ class Simulation(object):
 			self.OUTPUT[animal['name']] = {}
 			for habitat in self.habitats:
 				self.OUTPUT[animal['name']][habitat['name']] = self.process_habitat_simulation(animal,habitat)
-		pprint(self.OUTPUT)
+		if self.DEBUG:
+			pprint(self.OUTPUT)
 
 	def process_habitat_simulation(self,animal,habitat):
 
@@ -46,33 +49,35 @@ class Simulation(object):
 		max_population = 0
 		mortality_rate = 0
 		cause_of_death = {}
+		#each habitat starts off with exactly one
+		#male and one female
 		male_inhabitants = {
 			0 : {
 				'age' : 0,
-				'food_consumption' : {
-					0 : 0
-				}
+				'food_consumption' : {},
+				'water_consumption' : {}
 			}
 		}
 		female_inhabitants = {
 			0 : {
 				'age' : 0,
-				'food_consumption' : {
-					0 : 0
-				}
+				'food_consumption' : {},
+				'water_consumption' : {}
 			}
 		}
 		permutation = 0
 
 		#attempt to initialize species indicator variables
 		try:
-			monthly_water_consumption = animal['attributes']['monthly_water_consumption']
-			monthly_food_consumption = animal['attributes']['monthly_food_consumption']
+			animal_monthly_water_consumption = animal['attributes']['monthly_water_consumption']
+			animal_monthly_food_consumption = animal['attributes']['monthly_food_consumption']
 			life_span = animal['attributes']['life_span']
 			minimum_temperature = animal['attributes']['minimum_temperature']
 			maximum_temperature = animal['attributes']['maximum_temperature']
 			off_spring_rate = animal['attributes']['off_spring_rate']
 			off_spring_min = animal['attributes']['off_spring_min']
+			habitat_monthly_food = habitat['monthly_food']
+			habitat_monthly_water = habitat['monthly_water']
 		except OSError as e:
 			print(e)
 			#return if missing info
@@ -83,22 +88,29 @@ class Simulation(object):
 			for month in self.months:
 				#i typically dont write methods with this many parameters
 				#but for the sake of completing the task, here we go
-				female_inhabitants, male_inhabitants = self.age_inhabitants(male_inhabitants,female_inhabitants)
+				female_inhabitants, male_inhabitants = self.grow_inhabitants(
+					male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,
+					animal_monthly_food_consumption,habitat_monthly_food,habitat_monthly_water
+				)
 				female_inhabitants, male_inhabitants = self.breed_inhabitants(
-					male_inhabitants,female_inhabitants,off_spring_rate,off_spring_min,permutation)
+					male_inhabitants,female_inhabitants,off_spring_rate,off_spring_min,permutation
+				)
 				female_inhabitants, male_inhabitants = self.kill_inhabitants(
-					male_inhabitants,female_inhabitants,permutation,monthly_water_consumption,
-					monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
+					male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,
+					animal_monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
 				)
 
 				#months count
 				permutation += 1
 
-		pprint(animal['name'])
-		pprint('females:')
-		pprint(female_inhabitants)
-		pprint('males:')
-		pprint(male_inhabitants)
+		if self.DEBUG:
+			pprint("-----------------------------------------")
+			pprint(animal['name'])
+			pprint(habitat['name'])
+			pprint('females:')
+			pprint(female_inhabitants)
+			pprint('males:')
+			pprint(male_inhabitants)
 
 		return {
 			"Average_Population" : average_population, 
@@ -107,6 +119,19 @@ class Simulation(object):
 			"Cause_of_Death" : cause_of_death
 		}
 
+
+	def grow_inhabitants(
+		self,male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,
+		animal_monthly_food_consumption,habitat_monthly_food,habitat_monthly_water
+	):
+		female_inhabitants, male_inhabitants = self.age_inhabitants(male_inhabitants,female_inhabitants)
+		female_inhabitants, male_inhabitants = self.feed_inhabitants(
+			male_inhabitants,female_inhabitants,permutation,animal_monthly_food_consumption,habitat_monthly_food
+		)
+		female_inhabitants, male_inhabitants = self.water_inhabitants(
+			male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,habitat_monthly_water
+		)
+		return female_inhabitants, male_inhabitants
 
 	def age_inhabitants(self,male_inhabitants,female_inhabitants):
 		#grow both men and women by one month
@@ -117,6 +142,42 @@ class Simulation(object):
 		for female_inhabitant in female_inhabitants:
 			female_inhabitants[female_inhabitant]['age'] += 1
 			#TODO: write method for food consumption
+		return female_inhabitants, male_inhabitants
+
+	def feed_inhabitants(self,male_inhabitants,female_inhabitants,permutation,animal_monthly_food_consumption,habitat_monthly_food):
+		#data structures for reset of dicts
+		new_male_inhabitants = {
+			0 : {
+				'age' : 0,
+				'food_consumption' : {},
+				'water_consumption' : {}
+			}
+		}
+		new_female_inhabitants = {
+			0 : {
+				'age' : 0,
+				'food_consumption' : {},
+				'water_consumption' : {}
+			}
+		}
+
+		for male_inhabitant in male_inhabitants:
+			new_male_inhabitants[male_inhabitant] = male_inhabitants[male_inhabitant]
+			new_male_inhabitants[male_inhabitant]['food_consumption'] = merge_dicts(
+				new_male_inhabitants[male_inhabitant]['food_consumption'],
+				{permutation : animal_monthly_food_consumption}
+			)
+
+		for female_inhabitant in female_inhabitants:
+			new_female_inhabitants[female_inhabitant] = female_inhabitants[female_inhabitant]
+			new_female_inhabitants[female_inhabitant]['food_consumption'] = merge_dicts(
+				new_female_inhabitants[female_inhabitant]['food_consumption'],
+				{permutation : animal_monthly_food_consumption}
+			)
+
+		return new_female_inhabitants, new_male_inhabitants
+
+	def water_inhabitants(self,male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,habitat_monthly_water):
 		return female_inhabitants, male_inhabitants
 
 	#passing in large amount of parameters because 
@@ -147,18 +208,16 @@ class Simulation(object):
 					new_female_inhabitants = {
 						len(female_inhabitants) + new_birth : {
 							'age' : 0,
-							'food_consumption' : {
-								0 : 0
-							}
+							'food_consumption' : {},
+							'water_consumption' : {}
 						}
 					}
 				else:
 					new_male_inhabitants = {
 						len(male_inhabitants) + new_birth : {
 							'age' : 0,
-							'food_consumption' : {
-								0 : 0
-							}
+							'food_consumption' : {},
+							'water_consumption' : {}
 						}
 					}
 
@@ -171,52 +230,52 @@ class Simulation(object):
 	#passing in large amount of parameters because 
 	#passing entire animal structure is potentially more expensive
 	def kill_inhabitants(
-		self,male_inhabitants,female_inhabitants,permutation,monthly_water_consumption,
-		monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
+		self,male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,
+		animal_monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
 	):
 
 		male_inhabitants,female_inhabitants = self.kill_inhabitants_from_starvation(
-			male_inhabitants,female_inhabitants,permutation,monthly_water_consumption,
-			monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
+			male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,
+			animal_monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
 		)
 
 		male_inhabitants,female_inhabitants = self.kill_inhabitants_from_dehydration(
-			male_inhabitants,female_inhabitants,permutation,monthly_water_consumption,
-			monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
+			male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,
+			animal_monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
 		)
 
 		male_inhabitants,female_inhabitants = self.kill_inhabitants_from_natural_causes(
-			male_inhabitants,female_inhabitants,permutation,monthly_water_consumption,
-			monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
+			male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,
+			animal_monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
 		)
 
 		male_inhabitants,female_inhabitants = self.kill_inhabitants_from_extreme_temperature(
-			male_inhabitants,female_inhabitants,permutation,monthly_water_consumption,
-			monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
+			male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,
+			animal_monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
 		)
 
 		return male_inhabitants,female_inhabitants
 
 	def kill_inhabitants_from_starvation(
-		self,male_inhabitants,female_inhabitants,permutation,monthly_water_consumption,
-		monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
+		self,male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,
+		animal_monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
 	):
 		return male_inhabitants,female_inhabitants
 
 	def kill_inhabitants_from_dehydration(
-		self,male_inhabitants,female_inhabitants,permutation,monthly_water_consumption,
-		monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
+		self,male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,
+		animal_monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
 	):
 		return male_inhabitants,female_inhabitants
 
 	def kill_inhabitants_from_natural_causes(
 		self,male_inhabitants,female_inhabitants,permutation,
-		monthly_water_consumption,monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
+		animal_monthly_water_consumption,animal_monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
 	):
 		return male_inhabitants,female_inhabitants
 
 	def kill_inhabitants_from_extreme_temperature(
-		self,male_inhabitants,female_inhabitants,permutation,monthly_water_consumption,
-		monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
+		self,male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,
+		animal_monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
 	):
 		return male_inhabitants,female_inhabitants
