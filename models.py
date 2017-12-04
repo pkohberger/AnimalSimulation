@@ -3,9 +3,7 @@ import os
 from pprint import pprint
 from app import APP_ROOT, UPLOAD_FOLDER, merge_dicts
 from utils import Utils
-from enum import Enum
 from random import random
-from decimal import Decimal
 
 class Simulation(object):
 
@@ -17,7 +15,23 @@ class Simulation(object):
 	seasons = {
 		'jan' : 'winter', 'feb' : 'winter', 'mar' : 'spring', 'apr' : 'spring', 'may' : 'spring', 'jun' : 'summer',
 		'jul': 'summer', 'aug' : 'summer', 'sept' : 'fall', 'oct' : 'fall', 'nov' : 'fall', 'dec' : 'winter'
-	 }
+	}
+	POPULATION = 0
+	CAUSES_OF_DEATH_RAW = {
+		'TOTAL_DIED' : 0,
+		'STARVATION' : 0,
+		'THIRST': 0,
+		'COLD_WEATHER':0,
+		'HOT_WEATHER':0
+	}
+	CAUSES_OF_DEATH_AGGREGATED = {
+		'starvation' : 0,
+		'thirst': 0,
+		'cold_weather':0,
+		'hot_weather':0
+	}
+	MAX_POPULATION = 0
+	MORTALITY_RATE = 0
 	OUTPUT = {}
 	DEBUG = False
 
@@ -29,7 +43,7 @@ class Simulation(object):
 				self.years = simulation['years']
 				self.species = simulation['species']
 				self.habitats = simulation['habitats']
-				self.DEBUG = False
+				self.DEBUG = True
 			except yaml.YAMLError as e:
 				print(e)
 
@@ -61,18 +75,13 @@ class Simulation(object):
 
 	def process_habitat_simulation(self,animal,habitat):
 
-		#general initialization of necessary variables
-		average_population = 0
-		max_population = 0
-		mortality_rate = 0
-		cause_of_death = {}
 		#each habitat starts off with exactly one
 		#male and one female
 		male_inhabitants = self.get_inhabitants_structure(0)
 		female_inhabitants = self.get_inhabitants_structure(0)
 		permutation = 0
 
-		#attempt to initialize species indicator variables
+		#attempt to initialize species variables
 		try:
 			animal_monthly_water_consumption = animal['attributes']['monthly_water_consumption']
 			animal_monthly_food_consumption = animal['attributes']['monthly_food_consumption']
@@ -90,6 +99,10 @@ class Simulation(object):
 			print(e)
 			#return if missing info
 			return False
+
+		#make sure we clear the habitat
+		#aggregation properties for each habitat
+		self.reset_habitat_data_structures()
 
 		#lets run the actual simulation for this given habitat
 		for year in range(self.years):
@@ -109,9 +122,12 @@ class Simulation(object):
 					habitat_average_temperature,month,animal_temperature_failure_decimation_percentage
 				)
 
+				self.aggregate_population_data(len(female_inhabitants)+len(female_inhabitants))
+				self.aggregate_max_population_data(len(female_inhabitants)+len(female_inhabitants))
+
 				#months count
 				permutation += 1
-
+		'''
 		if self.DEBUG:
 			pprint("-------------")
 			pprint(animal['name'])
@@ -120,19 +136,97 @@ class Simulation(object):
 			pprint(female_inhabitants)
 			pprint('males:')
 			pprint(male_inhabitants)
-
-		pprint('females:')
-		pprint(len(female_inhabitants))
-		pprint('males:')
-		pprint(len(male_inhabitants))
+			pprint(self.CAUSES_OF_DEATH_RAW)
+		'''
 
 		return {
-			"Average_Population" : average_population, 
-			"Max_Population" : max_population, 
-			"Mortality_Rate" : mortality_rate, 
-			"Cause_of_Death" : cause_of_death
+			"Average_Population" : self.get_aggregate_population_data(), 
+			"Max_Population" : self.get_aggregate_max_population_data(), 
+			"Mortality_Rate" : 0, 
+			"Cause_of_Death" : self.get_aggregate_death_clauses()
 		}
 
+	def reset_habitat_data_structures(self):
+		self.POPULATION = 0
+		self.MAX_POPULATION = 0
+		self.CAUSES_OF_DEATH_RAW = {
+			'TOTAL_DIED' : 0,
+			'STARVATION' : 0,
+			'THIRST': 0,
+			'COLD_WEATHER':0,
+			'HOT_WEATHER':0
+		}
+		self.CAUSES_OF_DEATH_AGGREGATED = {
+			'starvation' : 0,
+			'thirst': 0,
+			'cold_weather':0,
+			'hot_weather':0
+		}
+		self.MAX_POPULATION = 0
+		self.MORTALITY_RATE = 0
+		return
+
+	def get_aggregate_population_data(self):
+		return self.POPULATION/(self.years * self.months_in_year)
+
+	def aggregate_population_data(self,inhabitants_count):
+		self.POPULATION += inhabitants_count
+		return
+
+	def get_aggregate_max_population_data(self):
+		return self.MAX_POPULATION
+
+	def aggregate_max_population_data(self,inhabitants_count):
+		self.MAX_POPULATION += max(inhabitants_count,self.MAX_POPULATION)
+		return
+
+	def get_aggregate_death_clauses(self):
+		#current iteration plus previous
+		total_died = self.CAUSES_OF_DEATH_RAW["TOTAL_DIED"]
+		starvation = self.CAUSES_OF_DEATH_RAW["STARVATION"]
+		thirst = self.CAUSES_OF_DEATH_RAW["THIRST"]
+		cold_weather = self.CAUSES_OF_DEATH_RAW["COLD_WEATHER"]
+		hot_weather = self.CAUSES_OF_DEATH_RAW["HOT_WEATHER"]
+
+		if total_died == 0:
+			#build structure
+			return  {
+				'starvation' : "0.00%",
+				'thirst': "0.00%",
+				'cold_weather': "0.00%",
+				'hot_weather': "0.00%"
+			}
+		else:
+			#build structure
+			return  {
+				'starvation' : str(round(float(float(starvation)/float(total_died) * float(100)),2)) + "%",
+				'thirst': str(round(float(float(thirst)/float(total_died) * float(100)),2)) + "%",
+				'cold_weather': str(round(float(float(cold_weather)/float(total_died) * float(100)),2)) + "%",
+				'hot_weather': str(round(float(float(hot_weather)/float(total_died) * float(100)),2)) + "%"
+			}
+
+	def aggregate_death_clauses(
+		self,killed_from_starvation,killed_from_thirst,killed_from_natural_causes,
+		killed_from_cold_weather,killed_from_hot_weather,male_inhabitants_living_count,female_inhabitants_living_count
+	):
+
+		#current iteration plus previous
+		total_died = killed_from_starvation + killed_from_thirst + killed_from_natural_causes + killed_from_cold_weather + killed_from_hot_weather + self.CAUSES_OF_DEATH_RAW["TOTAL_DIED"]
+		starvation = killed_from_starvation + self.CAUSES_OF_DEATH_RAW["STARVATION"]
+		thirst = killed_from_thirst + self.CAUSES_OF_DEATH_RAW["THIRST"]
+		cold_weather = killed_from_cold_weather + self.CAUSES_OF_DEATH_RAW["COLD_WEATHER"]
+		hot_weather = killed_from_hot_weather + self.CAUSES_OF_DEATH_RAW["HOT_WEATHER"]
+
+		#rebuild structure
+		self.CAUSES_OF_DEATH_RAW = {
+			'TOTAL_DIED' : total_died,
+			'STARVATION' : starvation,
+			'THIRST': thirst,
+			'COLD_WEATHER': cold_weather,
+			'HOT_WEATHER': hot_weather
+		}
+
+		return		
 
 	def grow_inhabitants(
 		self,male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,
@@ -295,20 +389,33 @@ class Simulation(object):
 		animal_monthly_food_consumption,life_span,animal_minimum_temperature,animal_maximum_temperature,
 		habitat_average_temperature,month,animal_temperature_failure_decimation_percentage
 	):
-		male_inhabitants,female_inhabitants = self.kill_inhabitants_from_starvation(
-			male_inhabitants,female_inhabitants
-		)
-		male_inhabitants,female_inhabitants = self.kill_inhabitants_from_dehydration(
-			male_inhabitants,female_inhabitants
-		)
 
-		male_inhabitants,female_inhabitants = self.kill_inhabitants_from_natural_causes(
+		killed_from_starvation = 0
+		killed_from_thirst = 0
+		killed_from_natural_causes = 0
+		killed_from_cold_weather = 0
+		killed_from_hot_weather = 0
+		
+		male_inhabitants,female_inhabitants,killed_from_natural_causes = self.kill_inhabitants_from_natural_causes(
 			male_inhabitants,female_inhabitants,life_span
 		)
 
-		male_inhabitants,female_inhabitants = self.kill_inhabitants_from_extreme_temperature(
+		male_inhabitants,female_inhabitants,killed_from_starvation = self.kill_inhabitants_from_starvation(
+			male_inhabitants,female_inhabitants
+		)
+
+		male_inhabitants,female_inhabitants,killed_from_thirst = self.kill_inhabitants_from_thirst(
+			male_inhabitants,female_inhabitants
+		)
+
+		male_inhabitants,female_inhabitants,killed_from_cold_weather,killed_from_hot_weather = self.kill_inhabitants_from_extreme_temperature(
 			male_inhabitants,female_inhabitants,animal_minimum_temperature,animal_maximum_temperature,
 			habitat_average_temperature,month,animal_temperature_failure_decimation_percentage
+		)
+
+		self.aggregate_death_clauses(
+			killed_from_starvation,killed_from_thirst,killed_from_natural_causes,
+			killed_from_cold_weather,killed_from_hot_weather,len(male_inhabitants),len(male_inhabitants)
 		)
 
 		return male_inhabitants,female_inhabitants
@@ -316,6 +423,8 @@ class Simulation(object):
 	def kill_inhabitants_from_starvation(self,male_inhabitants,female_inhabitants):
 		new_male_inhabitants = self.get_inhabitants_structure(0)
 		new_female_inhabitants = self.get_inhabitants_structure(0)
+
+		killed_from_starvation = 0
 
 		#kill females
 		i = 0
@@ -336,7 +445,7 @@ class Simulation(object):
 						#by setting live to false, we are essentially killing 
 						#that inhabitant by not transferring it to return dict
 						live = False
-						break
+						killed_from_starvation += 1
 			#after inner loop processes we only add to return data structure
 			#if live was never set to False
 			if live:
@@ -363,7 +472,7 @@ class Simulation(object):
 						#by setting live to false, we are essentially killing 
 						#that inhabitant by not transferring it to return dict
 						live = False
-						break
+						killed_from_starvation += 1
 			#after inner loop processes we only add to return data structure
 			#if live was never set to False
 			if live:
@@ -371,11 +480,17 @@ class Simulation(object):
 				#increment in order to reorder new structure
 				i += 1
 
-		return new_male_inhabitants,new_female_inhabitants
+		return new_male_inhabitants,new_female_inhabitants,killed_from_starvation
 
-	def kill_inhabitants_from_dehydration(self,male_inhabitants,female_inhabitants):
+	def kill_inhabitants_from_thirst(self,male_inhabitants,female_inhabitants):
 		new_male_inhabitants = self.get_inhabitants_structure(0)
 		new_female_inhabitants = self.get_inhabitants_structure(0)
+
+		killed_from_thirst = 0
+
+		#we are assuming that the current iteration stands for one given month
+		#because as this loop moves to the next iteration it is guarenteed that for one month
+		#the fluctuation temperature will persist
 
 		#kill females
 		i = 0
@@ -387,7 +502,7 @@ class Simulation(object):
 				#if current month less than or equal to 0 then we kill due to thirst
 				if female_inhabitants[female_inhabitant]['water_consumption'][water_consumption] <= 0:
 					live = False
-					break
+					killed_from_thirst += 1
 			#after inner loop processes we only add to return data structure
 			#if live was never set to False
 			if live:
@@ -405,7 +520,7 @@ class Simulation(object):
 				#if current month less than or equal to 0 then we kill due to thirst
 				if male_inhabitants[male_inhabitant]['water_consumption'][water_consumption] <= 0:
 					live = False
-					break
+					killed_from_thirst += 1
 			#after inner loop processes we only add to return data structure
 			#if live was never set to False
 			if live:
@@ -413,11 +528,13 @@ class Simulation(object):
 				#increment in order to reorder new structure
 				i += 1
 
-		return new_male_inhabitants,new_female_inhabitants
+		return new_male_inhabitants,new_female_inhabitants,killed_from_thirst
 
 	def kill_inhabitants_from_natural_causes(self,male_inhabitants,female_inhabitants,life_span):
 		new_male_inhabitants = self.get_inhabitants_structure(0)
 		new_female_inhabitants = self.get_inhabitants_structure(0)
+
+		killed_from_natural_causes = 0
 
 		#kill females
 		i = 0
@@ -429,6 +546,8 @@ class Simulation(object):
 				new_female_inhabitants[i] = female_inhabitants[female_inhabitant]
 				#increment in order to reorder new structure
 				i += 1
+			else:
+				killed_from_natural_causes += 0
 
 		#kill males
 		i = 0
@@ -440,13 +559,18 @@ class Simulation(object):
 				new_male_inhabitants[i] = male_inhabitants[male_inhabitant]
 				#increment in order to reorder new structure
 				i += 1
+			else:
+				killed_from_natural_causes += 0
 
-		return new_male_inhabitants,new_female_inhabitants
+		return new_male_inhabitants,new_female_inhabitants,killed_from_natural_causes
 
 	def kill_inhabitants_from_extreme_temperature(
 		self,male_inhabitants,female_inhabitants,animal_minimum_temperature,animal_maximum_temperature,
 		habitat_average_temperature,month,animal_temperature_failure_decimation_percentage
 	):
+
+		killed_from_cold_weather = 0
+		killed_from_hot_weather = 0
 
 		actual_fluctuated_temperature = self.get_monthly_fluctuated_temperature(
 			habitat_average_temperature[self.get_season(month)]
@@ -454,6 +578,9 @@ class Simulation(object):
 		
 		decimation_amount = 0
 		#if in temperature danger zone
+		#we are assuming that the current iteration stands for one given month
+		#because as this loop moves to the next iteration it is guarenteed that for one month
+		#the fluctuation temperature will persist
 		if actual_fluctuated_temperature > animal_maximum_temperature or actual_fluctuated_temperature < animal_minimum_temperature:
 
 			new_male_inhabitants = self.get_inhabitants_structure(0)
@@ -475,6 +602,9 @@ class Simulation(object):
 						new_female_inhabitants[j] = female_inhabitants[female_inhabitant]
 						#for renumbering
 						j += 1
+					else:
+						killed_from_cold_weather += 1 if actual_fluctuated_temperature < animal_minimum_temperature else 0
+						killed_from_hot_weather += 1 if actual_fluctuated_temperature > animal_maximum_temperature else 0
 					i += 1
 			#if we have a decimation value equal to 0
 			#it means we are in the temperature danger zone
@@ -502,6 +632,9 @@ class Simulation(object):
 						new_male_inhabitants[j] = male_inhabitants[male_inhabitant]
 						#for renumbering
 						j += 1
+					else:
+						killed_from_cold_weather += 1 if actual_fluctuated_temperature < animal_minimum_temperature else 0
+						killed_from_hot_weather += 1 if actual_fluctuated_temperature > animal_maximum_temperature else 0
 					i += 1
 			#if we have a decimation value equal to 0
 			#it means we are in the temperature danger zone
@@ -514,12 +647,12 @@ class Simulation(object):
 				new_male_inhabitants = male_inhabitants
 
 			#only returning new if severe temperature fluctuation
-			return new_male_inhabitants,new_female_inhabitants
+			return new_male_inhabitants,new_female_inhabitants,killed_from_cold_weather,killed_from_hot_weather
 
-		return male_inhabitants,female_inhabitants
+		return male_inhabitants,female_inhabitants,killed_from_cold_weather,killed_from_hot_weather
 
 	def get_monthly_fluctuated_temperature(self,temperature):
-		#make hotter or colder a 50/50 chance
+		#randomnly choose between hotter or colder fluctuation
 		if random() < .5:
 			#give .05 % chance 15 degrees colder
 			if random() < .05:
