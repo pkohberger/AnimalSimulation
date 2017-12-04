@@ -8,9 +8,10 @@
         <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
         <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     </head>
-    <div class=page>
+    <div class="page">
+        <div class="loading"></div>
         <h1 class="text-center">Species Simulation</h1>
-        <div class=metanav>
+        <div class="metanav">
             {% block body %}{% endblock %}
         </div>
     </div>

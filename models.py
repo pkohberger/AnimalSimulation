@@ -1,7 +1,7 @@
 import yaml
 import os
 from pprint import pprint
-from app import APP_ROOT, UPLOAD_FOLDER, merge_dicts
+from app import UPLOAD_FOLDER, OUTPUT_FOLDER, merge_dicts
 from utils import Utils
 from random import random
 
@@ -57,21 +57,33 @@ class Simulation(object):
 		#food_consumption and water_concumption keys
 		#are based on permutation or month they are born in
 		#so these may be arbitrary but will be in increments of 1
-		return {
+		return dict({
 			key : {
 				'age' : 0, 
 				'food_consumption' : {},
 				'water_consumption' : {}
 			}
-		}
+		})
 
 	def process_all_habitat_simulations(self):
-		for animal in self.species:
-			self.OUTPUT[animal['name']] = {}
-			for habitat in self.habitats:
-				self.OUTPUT[animal['name']][habitat['name']] = self.process_habitat_simulation(animal,habitat)
-		if self.DEBUG:
-			pprint(self.OUTPUT)
+		try:
+			for animal in self.species:
+				self.OUTPUT[animal['name']] = {}
+				for habitat in self.habitats:
+					self.OUTPUT[animal['name']][habitat['name']] = self.process_habitat_simulation(animal,habitat)
+			#output data structure to yaml format
+			file_name = os.path.join(OUTPUT_FOLDER, "output.txt")
+			with open(file_name, 'w') as stream:
+				yaml.dump(self.OUTPUT, stream, default_flow_style=False)
+
+				if self.DEBUG:
+					pprint(self.OUTPUT)
+
+				return True
+			
+		except OSError as e:
+			print(e)
+			return False
 
 	def process_habitat_simulation(self,animal,habitat):
 
@@ -102,7 +114,7 @@ class Simulation(object):
 
 		#make sure we clear the habitat
 		#aggregation properties for each habitat
-		self.reset_habitat_data_structures()
+		self.reset_habitat_data_structures()		
 
 		#lets run the actual simulation for this given habitat
 		for year in range(self.years):
@@ -137,12 +149,12 @@ class Simulation(object):
 			pprint('males:')
 			pprint(male_inhabitants)
 			pprint(self.CAUSES_OF_DEATH_RAW)
-		'''
+			'''
 
 		return {
 			"Average_Population" : self.get_aggregate_population_data(), 
 			"Max_Population" : self.get_aggregate_max_population_data(), 
-			"Mortality_Rate" : 0, 
+			"Mortality_Rate" : self.get_aggregate_mortality_data(), 
 			"Cause_of_Death" : self.get_aggregate_death_clauses()
 		}
 
@@ -177,8 +189,11 @@ class Simulation(object):
 		return self.MAX_POPULATION
 
 	def aggregate_max_population_data(self,inhabitants_count):
-		self.MAX_POPULATION += max(inhabitants_count,self.MAX_POPULATION)
+		self.MAX_POPULATION = max(inhabitants_count,self.MAX_POPULATION)
 		return
+
+	def get_aggregate_mortality_data(self):
+		return str(round(float(float(self.CAUSES_OF_DEATH_RAW["TOTAL_DIED"])/float(self.POPULATION) * float(100)),2))+"%"
 
 	def get_aggregate_death_clauses(self):
 		#current iteration plus previous
@@ -415,7 +430,7 @@ class Simulation(object):
 
 		self.aggregate_death_clauses(
 			killed_from_starvation,killed_from_thirst,killed_from_natural_causes,
-			killed_from_cold_weather,killed_from_hot_weather,len(male_inhabitants),len(male_inhabitants)
+			killed_from_cold_weather,killed_from_hot_weather,len(male_inhabitants),len(female_inhabitants)
 		)
 
 		return male_inhabitants,female_inhabitants

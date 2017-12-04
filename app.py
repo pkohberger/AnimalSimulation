@@ -4,6 +4,7 @@ from flask import render_template
 
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(APP_ROOT, 'static/uploads')
+OUTPUT_FOLDER = os.path.join(APP_ROOT, 'static/output')
 ALLOWED_EXTENSIONS = set(['yml'])
 
 app = Flask(__name__)
