@@ -4,7 +4,8 @@ from pprint import pprint
 from app import APP_ROOT, UPLOAD_FOLDER, merge_dicts
 from utils import Utils
 from enum import Enum
-from random import *
+from random import random
+from decimal import Decimal
 
 class Simulation(object):
 
@@ -28,7 +29,7 @@ class Simulation(object):
 				self.years = simulation['years']
 				self.species = simulation['species']
 				self.habitats = simulation['habitats']
-				self.DEBUG = True
+				self.DEBUG = False
 			except yaml.YAMLError as e:
 				print(e)
 
@@ -75,14 +76,16 @@ class Simulation(object):
 		try:
 			animal_monthly_water_consumption = animal['attributes']['monthly_water_consumption']
 			animal_monthly_food_consumption = animal['attributes']['monthly_food_consumption']
+			animal_temperature_failure_decimation_percentage = animal['attributes']['temperature_failure_decimation_percentage']
 			life_span = animal['attributes']['life_span']
-			minimum_temperature = animal['attributes']['minimum_temperature']
-			maximum_temperature = animal['attributes']['maximum_temperature']
+			animal_minimum_temperature = animal['attributes']['minimum_temperature']
+			animal_maximum_temperature = animal['attributes']['maximum_temperature']
 			off_spring_rate = animal['attributes']['off_spring_rate']
 			off_spring_min = animal['attributes']['off_spring_min']
 			off_spring_max = animal['attributes']['off_spring_max']
 			habitat_monthly_food = habitat['monthly_food']
 			habitat_monthly_water = habitat['monthly_water']
+			habitat_average_temperature = habitat['average_temperature']
 		except OSError as e:
 			print(e)
 			#return if missing info
@@ -102,7 +105,8 @@ class Simulation(object):
 				)
 				female_inhabitants, male_inhabitants = self.kill_inhabitants(
 					male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,
-					animal_monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
+					animal_monthly_food_consumption,life_span,animal_minimum_temperature,animal_maximum_temperature,
+					habitat_average_temperature,month,animal_temperature_failure_decimation_percentage
 				)
 
 				#months count
@@ -116,6 +120,11 @@ class Simulation(object):
 			pprint(female_inhabitants)
 			pprint('males:')
 			pprint(male_inhabitants)
+
+		pprint('females:')
+		pprint(len(female_inhabitants))
+		pprint('males:')
+		pprint(len(male_inhabitants))
 
 		return {
 			"Average_Population" : average_population, 
@@ -160,6 +169,8 @@ class Simulation(object):
 		new_female_inhabitants = self.get_inhabitants_structure(0)
 
 		#roughly distribute food 50/50
+		#TODO make the limit actual by
+		#computing percentage of males to females
 		male_habitat_monthly_food = habitat_monthly_food/2
 		male_consumption_total = 0
 		for male_inhabitant in male_inhabitants:
@@ -176,6 +187,8 @@ class Simulation(object):
 			male_consumption_total += animal_monthly_food_consumption
 
 		#roughly distribute food 50/50
+		#TODO make the limit actual by
+		#computing percentage of males to females
 		female_habitat_monthly_food = habitat_monthly_food/2
 		female_consumption_total = 0
 		for female_inhabitant in female_inhabitants:
@@ -200,6 +213,8 @@ class Simulation(object):
 		new_female_inhabitants = self.get_inhabitants_structure(0)
 
 		#roughly distribute water 50/50
+		#TODO make the limit actual by
+		#computing percentage of males to females
 		male_habitat_monthly_water = habitat_monthly_water/2
 		male_consumption_total = 0
 		for male_inhabitant in male_inhabitants:
@@ -216,6 +231,8 @@ class Simulation(object):
 			male_consumption_total += animal_monthly_water_consumption
 
 		#roughly distribute water 50/50
+		#TODO make the limit actual by
+		#computing percentage of males to females
 		female_habitat_monthly_water = habitat_monthly_water/2
 		female_consumption_total = 0
 		for female_inhabitant in female_inhabitants:
@@ -251,7 +268,7 @@ class Simulation(object):
 			for female_inhabitant in female_inhabitants:
 				#zero in numerator may cause an issue, lets ignore that
 				try:
-					if female_inhabitants[female_inhabitant]['age']/self.months_in_year > off_spring_min and female_inhabitants[female_inhabitant]['age']/self.months_in_year < off_spring_max:
+					if  female_inhabitants[female_inhabitant]['age']/self.months_in_year > off_spring_min and female_inhabitants[female_inhabitant]['age']/self.months_in_year < off_spring_max:
 						new_births[i] = i
 				except OSError as e:
 					print(e)
@@ -275,7 +292,8 @@ class Simulation(object):
 	#passing entire animal structure is potentially more expensive
 	def kill_inhabitants(
 		self,male_inhabitants,female_inhabitants,permutation,animal_monthly_water_consumption,
-		animal_monthly_food_consumption,life_span,minimum_temperature,maximum_temperature
+		animal_monthly_food_consumption,life_span,animal_minimum_temperature,animal_maximum_temperature,
+		habitat_average_temperature,month,animal_temperature_failure_decimation_percentage
 	):
 		male_inhabitants,female_inhabitants = self.kill_inhabitants_from_starvation(
 			male_inhabitants,female_inhabitants
@@ -289,7 +307,8 @@ class Simulation(object):
 		)
 
 		male_inhabitants,female_inhabitants = self.kill_inhabitants_from_extreme_temperature(
-			male_inhabitants,female_inhabitants,minimum_temperature,maximum_temperature
+			male_inhabitants,female_inhabitants,animal_minimum_temperature,animal_maximum_temperature,
+			habitat_average_temperature,month,animal_temperature_failure_decimation_percentage
 		)
 
 		return male_inhabitants,female_inhabitants
@@ -405,6 +424,7 @@ class Simulation(object):
 		#check each inhabitant
 		for female_inhabitant in female_inhabitants:
 			#check age of each inhabitant against given life span
+			#we are transferring all unless they are older
 			if female_inhabitants[female_inhabitant]['age']/12 <= life_span:
 				new_female_inhabitants[i] = female_inhabitants[female_inhabitant]
 				#increment in order to reorder new structure
@@ -415,6 +435,7 @@ class Simulation(object):
 		#check each inhabitant
 		for male_inhabitant in male_inhabitants:
 			#check age of each inhabitant against given life span
+			#we are transferring all unless they are older
 			if male_inhabitants[male_inhabitant]['age']/12 <= life_span:
 				new_male_inhabitants[i] = male_inhabitants[male_inhabitant]
 				#increment in order to reorder new structure
@@ -423,6 +444,95 @@ class Simulation(object):
 		return new_male_inhabitants,new_female_inhabitants
 
 	def kill_inhabitants_from_extreme_temperature(
-		self,male_inhabitants,female_inhabitants,minimum_temperature,maximum_temperature
+		self,male_inhabitants,female_inhabitants,animal_minimum_temperature,animal_maximum_temperature,
+		habitat_average_temperature,month,animal_temperature_failure_decimation_percentage
 	):
+
+		actual_fluctuated_temperature = self.get_monthly_fluctuated_temperature(
+			habitat_average_temperature[self.get_season(month)]
+		)
+		
+		decimation_amount = 0
+		#if in temperature danger zone
+		if actual_fluctuated_temperature > animal_maximum_temperature or actual_fluctuated_temperature < animal_minimum_temperature:
+
+			new_male_inhabitants = self.get_inhabitants_structure(0)
+			new_female_inhabitants = self.get_inhabitants_structure(0)
+
+			#count of females plus given percentage
+			decimation_amount = int(float(len(female_inhabitants)) * float(float(animal_temperature_failure_decimation_percentage)/float(100)))
+
+			#if greater then one then decimate
+			if decimation_amount >= 1:
+				i = 0
+				j = 0
+				for female_inhabitant in female_inhabitants:
+					#only add if counter greater than decimation kill number
+					#we are essentially skipping the oldest inhabitants
+					#as they are most susceptible to fluctuation changes, thats
+					#the assumption anyway
+					if i > decimation_amount:
+						new_female_inhabitants[j] = female_inhabitants[female_inhabitant]
+						#for renumbering
+						j += 1
+					i += 1
+			#if we have a decimation value equal to 0
+			#it means we are in the temperature danger zone
+			#but our population isnt large enough to kill a percentage of
+			#so we return our original structure. lets let the population grow
+			#and only kill if we have a valid integer response from decimation_amount
+			#i ran into this edge case while testing,if we are testing and returning floats then the 
+			#population will never grow
+			else:
+				new_female_inhabitants = female_inhabitants
+
+			#count of males plus given percentage
+			decimation_amount = int(float(len(male_inhabitants)) * float(float(animal_temperature_failure_decimation_percentage)/float(100)))
+
+			#if greater then one then decimate
+			if decimation_amount >= 1:
+				i = 0
+				j = 0
+				for male_inhabitant in male_inhabitants:
+					#only add if counter greater than decimation kill number
+					#we are essentially skipping the oldest inhabitants
+					#as they are most susceptible to fluctuation changes, thats
+					#the assumption anyway
+					if i >= decimation_amount:
+						new_male_inhabitants[j] = male_inhabitants[male_inhabitant]
+						#for renumbering
+						j += 1
+					i += 1
+			#if we have a decimation value equal to 0
+			#it means we are in the temperature danger zone
+			#but our population isnt large enough to kill a percentage of
+			#so we return our original structure. lets let the population grow
+			#and only kill if we have a valid integer response from decimation_amount
+			#i ran into this edge case while testing,if we are testing and returning floats then the 
+			#population will never grow
+			else:
+				new_male_inhabitants = male_inhabitants
+
+			#only returning new if severe temperature fluctuation
+			return new_male_inhabitants,new_female_inhabitants
+
 		return male_inhabitants,female_inhabitants
+
+	def get_monthly_fluctuated_temperature(self,temperature):
+		#make hotter or colder a 50/50 chance
+		if random() < .5:
+			#give .05 % chance 15 degrees colder
+			if random() < .05:
+				temperature -= 15
+			#else make 5 degrees colder
+			else:
+				temperature -= 5
+		else:
+			#give .05 % chance 15 degrees hotter
+			if random() < .05:
+				temperature += 15
+			#else make 5 degrees hotter
+			else:
+				temperature += 5
+
+		return temperature
