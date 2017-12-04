@@ -43,7 +43,7 @@ class Simulation(object):
 				self.years = simulation['years']
 				self.species = simulation['species']
 				self.habitats = simulation['habitats']
-				self.DEBUG = True
+				self.DEBUG = False
 			except yaml.YAMLError as e:
 				print(e)
 
@@ -72,7 +72,7 @@ class Simulation(object):
 				for habitat in self.habitats:
 					self.OUTPUT[animal['name']][habitat['name']] = self.process_habitat_simulation(animal,habitat)
 			#output data structure to yaml format
-			file_name = os.path.join(OUTPUT_FOLDER, "output.txt")
+			file_name = os.path.join(OUTPUT_FOLDER, "sample_output.txt")
 			with open(file_name, 'w') as stream:
 				yaml.dump(self.OUTPUT, stream, default_flow_style=False)
 
@@ -139,7 +139,7 @@ class Simulation(object):
 
 				#months count
 				permutation += 1
-		'''
+
 		if self.DEBUG:
 			pprint("-------------")
 			pprint(animal['name'])
@@ -149,7 +149,6 @@ class Simulation(object):
 			pprint('males:')
 			pprint(male_inhabitants)
 			pprint(self.CAUSES_OF_DEATH_RAW)
-			'''
 
 		return {
 			"Average_Population" : self.get_aggregate_population_data(), 
