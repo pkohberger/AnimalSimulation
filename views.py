@@ -1,4 +1,4 @@
-from app import Flask, app, render_template, request, redirect, url_for, os, allowed_file
+from app import Flask, flash, app, render_template, request, redirect, url_for, os, allowed_file
 from werkzeug.utils import secure_filename
 from models import Simulation
 

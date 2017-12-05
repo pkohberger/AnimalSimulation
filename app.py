@@ -1,6 +1,5 @@
 import os
-from flask import Flask, request, redirect, url_for
-from flask import render_template
+from flask import Flask, request, redirect, url_for, render_template, flash
 
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(APP_ROOT, 'static/uploads')
