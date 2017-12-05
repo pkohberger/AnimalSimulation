@@ -19,6 +19,11 @@
         </div>
         <h1 class="text-center">Animal Simulation</h1>
         <div class="metanav">
+            {% if request.args.get('error') %}
+                <ul class="flashes col-xs-12">
+                    <li>{{ request.args.get('error') }}</li>
+                </ul>
+            {% endif %}
             {% block body %}{% endblock %}
         </div>
     </div>

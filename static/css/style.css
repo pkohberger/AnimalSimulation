@@ -68,3 +68,9 @@
     margin-left: 37.5%;
     width: 25%;
 }
+
+.flashes {
+  text-align:center;
+  color:red;
+  list-style: none;
+}

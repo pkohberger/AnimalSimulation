@@ -1,110 +1,110 @@
 bear:
   desert:
-    Average_Population: 5
+    Average_Population: 2
     Cause_of_Death:
-      cold_weather: 0.0%
-      hot_weather: 0.0%
-      starvation: 0.0%
-      thirst: 100.0%
-    Max_Population: 8
-    Mortality_Rate: 1.41%
+      cold_weather: 0.00%
+      hot_weather: 0.00%
+      starvation: 0.00%
+      thirst: 0.00%
+    Max_Population: 6
+    Mortality_Rate: 0.0%
   forest:
-    Average_Population: 15
+    Average_Population: 2
     Cause_of_Death:
-      cold_weather: 0.0%
-      hot_weather: 0.0%
-      starvation: 100.0%
-      thirst: 0.0%
-    Max_Population: 20
-    Mortality_Rate: 0.44%
+      cold_weather: 0.00%
+      hot_weather: 0.00%
+      starvation: 0.00%
+      thirst: 0.00%
+    Max_Population: 8
+    Mortality_Rate: 0.0%
   hills:
-    Average_Population: 20
+    Average_Population: 2
     Cause_of_Death:
-      cold_weather: 0.0%
-      hot_weather: 0.0%
-      starvation: 100.0%
-      thirst: 0.0%
-    Max_Population: 26
-    Mortality_Rate: 0.31%
+      cold_weather: 0.00%
+      hot_weather: 0.00%
+      starvation: 0.00%
+      thirst: 0.00%
+    Max_Population: 6
+    Mortality_Rate: 0.0%
   mountains:
-    Average_Population: 17
+    Average_Population: 2
     Cause_of_Death:
-      cold_weather: 0.0%
-      hot_weather: 0.0%
-      starvation: 100.0%
-      thirst: 0.0%
-    Max_Population: 22
-    Mortality_Rate: 0.37%
+      cold_weather: 0.00%
+      hot_weather: 0.00%
+      starvation: 0.00%
+      thirst: 0.00%
+    Max_Population: 6
+    Mortality_Rate: 0.0%
   oasis:
-    Average_Population: 30
+    Average_Population: 2
     Cause_of_Death:
-      cold_weather: 65.93%
-      hot_weather: 34.07%
-      starvation: 0.0%
-      thirst: 0.0%
-    Max_Population: 40
-    Mortality_Rate: 0.25%
+      cold_weather: 0.00%
+      hot_weather: 0.00%
+      starvation: 0.00%
+      thirst: 0.00%
+    Max_Population: 6
+    Mortality_Rate: 0.0%
   plains:
-    Average_Population: 20
+    Average_Population: 2
     Cause_of_Death:
-      cold_weather: 0.0%
-      hot_weather: 0.0%
-      starvation: 100.0%
-      thirst: 0.0%
-    Max_Population: 26
-    Mortality_Rate: 0.32%
+      cold_weather: 0.00%
+      hot_weather: 0.00%
+      starvation: 0.00%
+      thirst: 0.00%
+    Max_Population: 8
+    Mortality_Rate: 0.0%
 kangaroo:
   desert:
-    Average_Population: 5
+    Average_Population: 3
     Cause_of_Death:
-      cold_weather: 0.0%
-      hot_weather: 0.0%
-      starvation: 0.0%
-      thirst: 100.0%
-    Max_Population: 8
-    Mortality_Rate: 1.58%
+      cold_weather: 0.00%
+      hot_weather: 0.00%
+      starvation: 0.00%
+      thirst: 0.00%
+    Max_Population: 10
+    Mortality_Rate: 0.0%
   forest:
-    Average_Population: 19
+    Average_Population: 3
     Cause_of_Death:
-      cold_weather: 0.0%
-      hot_weather: 0.0%
-      starvation: 100.0%
-      thirst: 0.0%
-    Max_Population: 26
-    Mortality_Rate: 0.22%
+      cold_weather: 0.00%
+      hot_weather: 0.00%
+      starvation: 0.00%
+      thirst: 0.00%
+    Max_Population: 8
+    Mortality_Rate: 0.0%
   hills:
-    Average_Population: 24
+    Average_Population: 3
     Cause_of_Death:
-      cold_weather: 0.0%
-      hot_weather: 0.0%
-      starvation: 0.0%
-      thirst: 100.0%
-    Max_Population: 34
-    Mortality_Rate: 0.11%
+      cold_weather: 0.00%
+      hot_weather: 0.00%
+      starvation: 0.00%
+      thirst: 0.00%
+    Max_Population: 12
+    Mortality_Rate: 0.0%
   mountains:
-    Average_Population: 19
+    Average_Population: 3
     Cause_of_Death:
-      cold_weather: 0.0%
-      hot_weather: 0.0%
-      starvation: 0.0%
-      thirst: 100.0%
-    Max_Population: 26
-    Mortality_Rate: 0.23%
+      cold_weather: 0.00%
+      hot_weather: 0.00%
+      starvation: 0.00%
+      thirst: 0.00%
+    Max_Population: 8
+    Mortality_Rate: 0.0%
   oasis:
-    Average_Population: 30
+    Average_Population: 3
     Cause_of_Death:
-      cold_weather: 56.41%
-      hot_weather: 43.59%
-      starvation: 0.0%
-      thirst: 0.0%
-    Max_Population: 40
-    Mortality_Rate: 0.21%
+      cold_weather: 0.00%
+      hot_weather: 0.00%
+      starvation: 0.00%
+      thirst: 0.00%
+    Max_Population: 10
+    Mortality_Rate: 0.0%
   plains:
-    Average_Population: 25
+    Average_Population: 3
     Cause_of_Death:
-      cold_weather: 0.0%
-      hot_weather: 0.0%
-      starvation: 100.0%
-      thirst: 0.0%
-    Max_Population: 34
-    Mortality_Rate: 0.1%
+      cold_weather: 0.00%
+      hot_weather: 0.00%
+      starvation: 0.00%
+      thirst: 0.00%
+    Max_Population: 8
+    Mortality_Rate: 0.0%

@@ -17,5 +17,7 @@ def upload_file():
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             if Simulation(filename).process_all_habitat_simulations():
             	return redirect('/static/output/sample_output.txt')
+            else:
+        		redirect("/?error=Something went wrong on the server")
 
-	return redirect(url_for('home_page'))
+	return redirect("/?error=Something went wrong on the server")
