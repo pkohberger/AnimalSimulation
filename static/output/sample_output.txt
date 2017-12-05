@@ -15,7 +15,7 @@ bear:
       hot_weather: 0.00%
       starvation: 0.00%
       thirst: 0.00%
-    Max_Population: 8
+    Max_Population: 6
     Mortality_Rate: 0.0%
   hills:
     Average_Population: 2
@@ -51,7 +51,7 @@ bear:
       hot_weather: 0.00%
       starvation: 0.00%
       thirst: 0.00%
-    Max_Population: 8
+    Max_Population: 6
     Mortality_Rate: 0.0%
 kangaroo:
   desert:
@@ -61,7 +61,7 @@ kangaroo:
       hot_weather: 0.00%
       starvation: 0.00%
       thirst: 0.00%
-    Max_Population: 10
+    Max_Population: 8
     Mortality_Rate: 0.0%
   forest:
     Average_Population: 3
@@ -70,7 +70,7 @@ kangaroo:
       hot_weather: 0.00%
       starvation: 0.00%
       thirst: 0.00%
-    Max_Population: 8
+    Max_Population: 12
     Mortality_Rate: 0.0%
   hills:
     Average_Population: 3
@@ -79,7 +79,7 @@ kangaroo:
       hot_weather: 0.00%
       starvation: 0.00%
       thirst: 0.00%
-    Max_Population: 12
+    Max_Population: 8
     Mortality_Rate: 0.0%
   mountains:
     Average_Population: 3
@@ -88,7 +88,7 @@ kangaroo:
       hot_weather: 0.00%
       starvation: 0.00%
       thirst: 0.00%
-    Max_Population: 8
+    Max_Population: 10
     Mortality_Rate: 0.0%
   oasis:
     Average_Population: 3
@@ -106,5 +106,5 @@ kangaroo:
       hot_weather: 0.00%
       starvation: 0.00%
       thirst: 0.00%
-    Max_Population: 8
+    Max_Population: 10
     Mortality_Rate: 0.0%
